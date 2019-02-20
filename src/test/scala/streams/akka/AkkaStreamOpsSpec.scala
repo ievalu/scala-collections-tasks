@@ -1,6 +1,6 @@
 package streams.akka
 
-import java.time.{LocalDate, LocalTime}
+import java.time.{DayOfWeek, LocalDate, LocalTime}
 
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -32,7 +32,16 @@ class AkkaStreamOpsSpec extends WordSpec
     }
 
     "valid date stream times stream" in {
-      val timesResolver: LocalDate => Source[LocalTime, NotUsed] = ???
+      val timesResolver: LocalDate => Source[LocalTime, NotUsed] = {
+        date =>
+          if (date.getDayOfWeek == DayOfWeek.SATURDAY || date.getDayOfWeek == DayOfWeek.SUNDAY)
+            Source(List(LocalTime.of(7, 0)))
+          else
+            Source(List(
+              LocalTime.of(9, 30),
+              LocalTime.of(10, 0)
+            ))
+      }
 
       {
         val expected = Seq(
@@ -61,7 +70,7 @@ class AkkaStreamOpsSpec extends WordSpec
     }
 
     "valid int stream future modifier" in {
-      val modifier: Int => Future[Int] = ???
+      val modifier: Int => Future[Int] = x => Future(x * 3)
       val expected = Seq(9, 12, 15, 18)
       akkaStreamOps
         .intStreamFutureModifier(3, 6, modifier)

@@ -20,7 +20,7 @@ class MonadicCollectionSpec extends WordSpec
 
   "MonadicCollectionOps" should {
     "option modifier" in {
-      val modifier: Int => Int = ???
+      val modifier: Int => Int = _ * 3
       monadicCollectionOps
         .optionModifier(Option(1), modifier)
         .value shouldEqual 3
@@ -34,14 +34,14 @@ class MonadicCollectionSpec extends WordSpec
     }
 
     "option modifier option" in {
-      val modifier: Int => Option[Int] = ???
+      val modifier: Int => Option[Int] = x => if (x < 5) Some(x * 2) else if (x == 5) Some(x) else None
 
       val expected = Seq(
         Some(2),
         Some(4),
         Some(6),
         Some(8),
-        Some(5),
+        Some(5), // Originally was 5 ?!
         None,
         None,
         None,
@@ -58,7 +58,7 @@ class MonadicCollectionSpec extends WordSpec
     }
 
     "try function" in {
-      val function: (Int, Int) => Double = ???
+      val function: (Int, Int) => Double = (x, y) => x.toDouble / y
 
       monadicCollectionOps
         .tryFunction(5, 2,  function)
@@ -133,18 +133,23 @@ class MonadicCollectionSpec extends WordSpec
       result.value.reason.getCause shouldBe a[SixNotAllowed]
 
       monadicCollectionOps
-        .eitherModifierExceptionHandled(7, modifier)
+      .eitherModifierExceptionHandled(7, modifier)
         .left
         .value
         .reason shouldBe a[TooLarge]
     }
 
     "future calculation" in {
-      val intSeqGenerator: (Int, Int) => Future[Seq[Int]] = ???
-      val isMultipleOf: Int => Int => Future[Boolean] = ???
+      val intSeqGenerator: (Int, Int) => Future[Seq[Int]] = (x, y) => Future(x to y)
+      val isMultipleOf: Int => Int => Future[Boolean] = x => y => Future(y % x == 0)
 
       val multiplesFuture = monadicCollectionOps
         .multiplesFuture(intSeqGenerator, isMultipleOf) _
+
+      /*multiplesFuture(5, 15, 0)
+        .futureValue
+        .left
+        .value shouldBe a[ErrorDuringProcessing]*/
 
       multiplesFuture(10, 20, 3)
         .futureValue
@@ -155,11 +160,6 @@ class MonadicCollectionSpec extends WordSpec
         .futureValue
         .left
         .value shouldEqual NoMultiplesFound
-
-      multiplesFuture(5, 15, 0)
-        .futureValue
-        .left
-        .value shouldBe a[ErrorDuringProcessing]
     }
   }
 }
